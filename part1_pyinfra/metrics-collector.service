@@ -1,0 +1,30 @@
+[Unit]
+Description=Metrics Collector - health-check HTTP pour la plateforme data
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=metrics
+Group=metrics
+WorkingDirectory=/opt/metrics-collector
+ExecStart=/usr/bin/python3 /opt/metrics-collector/metrics_collector.py
+
+# Redemarre automatiquement en cas de crash (exigence du cahier des charges)
+Restart=always
+RestartSec=5
+
+# Logs envoyes a journald -> `journalctl -u metrics-collector -f`
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=metrics-collector
+
+# Durcissement basique (bonnes pratiques securite systemd, sans risque
+# de casser le service : il n'a besoin d'aucun privilege particulier)
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target
+
