@@ -1,0 +1,50 @@
+# clickhouse-service.yaml
+#
+# Deux Services, pour deux besoins differents :
+#
+#  1) "clickhouse" (headless, clusterIP: None) : requis par le champ
+#     spec.serviceName du StatefulSet pour donner une identite reseau
+#     stable a chaque pod. On ne s'en sert pas directement en tant que
+#     client ici (une seule instance), mais c'est la bonne pratique
+#     associee a tout StatefulSet.
+#
+#  2) "clickhouse-client" (ClusterIP) : c'est CE service qu'on utilise
+#     pour se connecter a ClickHouse depuis l'exterieur du cluster,
+#     via `kubectl port-forward` (voir send_metrics.py / README).
+apiVersion: v1
+kind: Service
+metadata:
+  name: clickhouse
+  labels:
+    app: clickhouse
+spec:
+  clusterIP: None
+  selector:
+    app: clickhouse
+  ports:
+    - name: http
+      port: 8123
+      targetPort: 8123
+    - name: native
+      port: 9000
+      targetPort: 9000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: clickhouse-client
+  labels:
+    app: clickhouse
+spec:
+  type: ClusterIP   # Alternative : passer a "NodePort" (+ nodePort: 30123 par ex.)
+                     # si tu veux y acceder sans kubectl port-forward.
+  selector:
+    app: clickhouse
+  ports:
+    - name: http
+      port: 8123
+      targetPort: 8123
+    - name: native
+      port: 9000
+      targetPort: 9000
+

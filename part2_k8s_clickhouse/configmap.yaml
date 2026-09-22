@@ -1,0 +1,40 @@
+# configmap.yaml
+#
+# Deux usages regroupes dans une seule ConfigMap :
+#
+#  1) config-override.xml : fichier de config ClickHouse "additionnel".
+#     Tout fichier XML depose dans /etc/clickhouse-server/config.d/ est
+#     automatiquement fusionne avec la config par defaut de l'image
+#     (c'est le mecanisme standard de ClickHouse pour surcharger sa config).
+#
+#  2) init-db.sql : script SQL execute UNE SEULE FOIS, au tout premier
+#     demarrage du conteneur (uniquement si le volume de donnees est
+#     vide). C'est le mecanisme /docker-entrypoint-initdb.d/ de l'image
+#     officielle clickhouse/clickhouse-server (equivalent a ce que font
+#     les images officielles postgres/mysql). C'est ici qu'on cree la
+#     table job_metrics demandee par l'enonce.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: clickhouse-config
+  labels:
+    app: clickhouse
+data:
+  config-override.xml: |
+    <clickhouse>
+        <!-- Logs un peu plus verbeux : utile pour le debug (critere "Ops"). -->
+        <logger>
+            <level>information</level>
+            <console>true</console>
+        </logger>
+    </clickhouse>
+
+  init-db.sql: |
+    CREATE TABLE IF NOT EXISTS job_metrics (
+        job_id String,
+        timestamp DateTime,
+        duration_sec UInt32,
+        success Bool
+    ) ENGINE = MergeTree
+    ORDER BY (job_id, timestamp);
+
