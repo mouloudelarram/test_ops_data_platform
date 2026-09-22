@@ -1,0 +1,91 @@
+# clickhouse-deployment.yaml
+#
+# Choix : StatefulSet plutot qu'un simple Deployment (le nom du fichier
+# est impose par l'enonce, mais rien n'empeche le contenu d'etre un
+# StatefulSet, ce que l'enonce autorise explicitement : "Deployment ou
+# StatefulSet (1 instance)").
+#
+# Pourquoi StatefulSet ? ClickHouse est un service "stateful" (une base
+# de donnees) : un StatefulSet lui donne une identite stable (le pod
+# s'appelle "clickhouse-0", pas un nom aleatoire) et gere lui-meme la
+# creation d'un PersistentVolumeClaim dedie via `volumeClaimTemplates`.
+# Une seule replica suffit ici, mais la structure resterait coherente
+# si on voulait scaler plus tard.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: clickhouse
+  labels:
+    app: clickhouse
+spec:
+  serviceName: clickhouse   # doit correspondre au Service headless (voir clickhouse-service.yaml)
+  replicas: 1
+  selector:
+    matchLabels:
+      app: clickhouse
+  template:
+    metadata:
+      labels:
+        app: clickhouse
+    spec:
+      containers:
+        - name: clickhouse
+          image: clickhouse/clickhouse-server:24.8
+          ports:
+            - name: http
+              containerPort: 8123
+            - name: native
+              containerPort: 9000
+          volumeMounts:
+            # Donnees persistees sur le disque (voir volumeClaimTemplates plus bas)
+            - name: data
+              mountPath: /var/lib/clickhouse
+            # Config additionnelle (fusionnee avec la config par defaut de l'image)
+            - name: config
+              mountPath: /etc/clickhouse-server/config.d/config-override.xml
+              subPath: config-override.xml
+            # Script de creation de table, execute au 1er demarrage
+            - name: config
+              mountPath: /docker-entrypoint-initdb.d/init-db.sql
+              subPath: init-db.sql
+            # ClickHouse recommande d'agrandir /dev/shm (64Mi par defaut sous Docker, trop juste)
+            - name: shm
+              mountPath: /dev/shm
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+          # /ping est un endpoint HTTP special de ClickHouse qui repond juste "Ok."
+          # tres pratique pour les probes k8s (leger, pas besoin d'authentification).
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+      volumes:
+        - name: config
+          configMap:
+            name: clickhouse-config
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 256Mi
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 2Gi
+
