@@ -1,22 +1,7 @@
-# Test technique – Ingénieur(e) Data Platform Ops
-
-> 📄 Énoncé original : [`Case Data Ops senior.docx`](./Case%20Data%20Ops%20senior.docx)
-> ⏱️ Durée indicative : 1 heure — 🧰 Technologies : Python, uv, systemd, PyInfra, Kubernetes, ClickHouse
-
-Ce dépôt contient le rendu du test technique, en deux parties :
-
-1. **Partie 1 (« Old School »)** : un service de health-check Python, packagé en service `systemd`, déployé de façon automatisée et idempotente sur 2 serveurs avec **PyInfra**.
-2. **Partie 2 (« New School »)** : une base **ClickHouse** déployée sur **Kubernetes**, avec un script Python qui y insère des métriques simulées.
-
-> 💡 **Note pour la relecture** : je suis junior sur certains de ces sujets (PyInfra, Kubernetes, ClickHouse), donc ce README détaille aussi le **« pourquoi »** de chaque choix, pas seulement le « quoi ». L'idée est de pouvoir réexpliquer/défendre chaque décision à l'oral.
-
----
-
-## 📂 Arborescence du rendu
+## 📂 Arborescence
 
 ```
 test_ops_data_platform/
-├── pyproject.toml                  # dépendances Python (gérées avec uv)
 ├── part1_pyinfra/
 │   ├── metrics_collector.py        # le service HTTP /health
 │   ├── metrics-collector.service   # l'unité systemd
@@ -140,25 +125,3 @@ kubectl logs clickhouse-0 --previous     # logs du conteneur précédent (si cra
 ```
 
 ---
-
-## 📌 Récapitulatif face aux critères d'évaluation
-
-| Compétence | Ce que ce rendu propose |
-|---|---|
-| Python | Code sans dépendance inutile, typé, commenté, logs clairs (`logging`) |
-| systemd | `Restart=always`, logs via journald, utilisateur dédié, démarrage au boot |
-| PyInfra | Idempotence réelle (restart conditionnel), inventaire séparé, lisible |
-| Kubernetes | StatefulSet + volume + probes + 2 Services, YAML commenté |
-| ClickHouse | Table créée automatiquement, ingestion HTTP vérifiée par un `count(*)` |
-| Ops | Logs partout, retry/backoff, commandes de debug documentées ci-dessus |
-
----
-
-## 🎓 Petit lexique (pour la revue / l'entretien)
-
-- **Idempotent** : on peut exécuter l'action plusieurs fois, le résultat final est le même qu'en l'exécutant une seule fois (pas d'effet de bord cumulatif).
-- **systemd unit** : fichier de config qui décrit à Linux comment démarrer/surveiller/redémarrer un programme en tant que service.
-- **StatefulSet** : ressource Kubernetes pour les applications avec état (bases de données...), qui donne une identité stable + un volume dédié à chaque instance.
-- **ConfigMap** : objet Kubernetes qui stocke de la config (texte) injectable dans un pod, sans la coder en dur dans l'image.
-- **Probe (readiness/liveness)** : vérification périodique par Kubernetes qu'un pod répond bien, pour décider s'il doit recevoir du trafic (*readiness*) ou être redémarré (*liveness*).
-
