@@ -1,0 +1,16 @@
+[project]
+name = "test-ops-data-platform"
+version = "0.1.0"
+description = "Test technique Data Platform Ops : PyInfra/systemd (partie 1) + Kubernetes/ClickHouse (partie 2)"
+requires-python = ">=3.10"
+dependencies = [
+    "pyinfra>=2.0,<3",
+    "requests>=2.31",
+]
+
+[tool.uv]
+# Ce dépôt n'est pas une librairie à publier : on demande simplement à uv
+# de créer un environnement virtuel (.venv) avec les dépendances ci-dessus,
+# sans essayer de "packager" ce projet.
+package = false
+
